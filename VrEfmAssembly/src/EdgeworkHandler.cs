@@ -1,10 +1,10 @@
-﻿public struct EdgeworkHandler
+﻿public class EdgeworkHandler
 {
-    public string Batteries;
-    public string Indicators;
-    public string Ports;
-    public string Serial;
-    public string Other;
+    public string Batteries = "";
+    public string Indicators = "";
+    public string Ports = "";
+    public string Serial = "";
+    public string Other = "";
 
     public string GetText()
     {

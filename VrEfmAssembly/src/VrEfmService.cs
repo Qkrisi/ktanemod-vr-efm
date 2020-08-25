@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Windows.Speech;
 using PdfiumViewer;
+using VrEfm;
 using Module = VrEfm.Module;
 
 public partial class VrEfmService : MonoBehaviour
@@ -42,7 +43,9 @@ public partial class VrEfmService : MonoBehaviour
 
     public static VrEfmService instance = null;
 
-    public EdgeworkHandler Edgework = new EdgeworkHandler();
+    private Dictionary<Bomb, EdgeworkHandler> Edgeworks = new Dictionary<Bomb, EdgeworkHandler>();
+    private EdgeworkHandler _Edgework = null;
+    public EdgeworkHandler Edgework { get => _Edgework == null ? new EdgeworkHandler() : _Edgework; set { _Edgework = value; UpdateEdgework(); } }
 
     [HideInInspector]
     public GameObject ManualObject;
@@ -99,12 +102,13 @@ public partial class VrEfmService : MonoBehaviour
                     StartCoroutine(CheckForBomb());
                     StartCoroutine(FactoryCheck());
                     StartCoroutine(CheckNewModule(HandleModule));
-                    var note = Notes[null];
-                    CurrentNote = note;
+                    StartCoroutine(CheckNewBomb(HandleBomb));
+                    CurrentNote = Notes[null];
                     Notes.Clear();
                     CurrentNote.Reset();
                     Notes.Add(null, CurrentNote);
-                    Edgework.Clear();
+                    Edgework = null;
+                    Edgeworks.Clear();
                     recognizer.Start();
                     break;
                 case KMGameInfo.State.Setup:
@@ -116,6 +120,7 @@ public partial class VrEfmService : MonoBehaviour
                     StopCoroutine(FactoryCheck());
                     StopCoroutine(WaitUntilEndFactory());
                     StopCoroutine("CheckNewModule");
+                    StopCoroutine("CheckNewBomb");
                     Bombs.Clear();
                     BombCommanders.Clear();
                     recognizer.Stop();
@@ -189,7 +194,23 @@ public partial class VrEfmService : MonoBehaviour
     private void HandleModule(Module module)
     {
         if(module!=null) Open(module.ModuleName);
-        TryGetNote(module, out CurrentNote);
+        if (!TryGetNote(module, out ModuleNote note))
+        {
+            note = new ModuleNote($"{module.ModuleName}\n\n");
+            Notes.Add(module.BombComponent, note);
+        }
+        CurrentNote = Notes[module.BombComponent];
         ChangeNoteText(CurrentNote.Text);
+    }
+
+    private void HandleBomb(BombCommander bomb)
+    {
+        if(bomb==null)
+        {
+            Edgework = null;
+            return;
+        }
+        Edgeworks.TryGetValue(bomb.Bomb, out EdgeworkHandler edgework);
+        Edgework = edgework;
     }
 }

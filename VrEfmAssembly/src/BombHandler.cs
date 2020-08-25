@@ -33,6 +33,21 @@ public partial class VrEfmService
         }
     }
 
+    private IEnumerator CheckNewBomb(Action<BombCommander> OnNew)
+    {
+        BombCommander OldBomb = null;
+        while (true)
+        {
+            yield return null;
+            var NewBomb = GetHeldBomb();
+            if (NewBomb != OldBomb)
+            {
+                OnNew(NewBomb);
+                OldBomb = NewBomb;
+            }
+        }
+    }
+
     private BombCommander GetHeldBomb()
     {
         BombCommander held = null;

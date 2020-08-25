@@ -7,8 +7,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Windows.Speech;
 using PdfiumViewer;
+using Module = VrEfm.Module;
 
-public class VrEfmService : MonoBehaviour
+public partial class VrEfmService : MonoBehaviour
 {
     private Dictionary<string, LinkedList<Texture2D>> ManualCache = new Dictionary<string, LinkedList<Texture2D>>();
     private LinkedListNode<Texture2D> _CurrentManual = null;
@@ -60,7 +61,7 @@ public class VrEfmService : MonoBehaviour
 
     public void Open(string module)
     {
-        ManualCache.TryGetValue(module, out LinkedList<Texture2D> manual);
+        var manual = PrepareModule(module);
         CurrentManual = manual.First;
     }
     #endregion
@@ -92,12 +93,37 @@ public class VrEfmService : MonoBehaviour
         if (!Directory.Exists(path)) Directory.CreateDirectory(path);
         GetComponent<KMGameInfo>().OnStateChange += (state) =>
         {
-            if (state == KMGameInfo.State.Gameplay)
+            switch(state)
             {
-                Edgework.Clear();
-                recognizer.Start();
+                case KMGameInfo.State.Gameplay:
+                    StartCoroutine(CheckForBomb());
+                    StartCoroutine(FactoryCheck());
+                    StartCoroutine(CheckNewModule(HandleModule));
+                    var note = Notes[null];
+                    CurrentNote = note;
+                    Notes.Clear();
+                    CurrentNote.Reset();
+                    Notes.Add(null, CurrentNote);
+                    Edgework.Clear();
+                    recognizer.Start();
+                    break;
+                case KMGameInfo.State.Setup:
+                case KMGameInfo.State.PostGame:
+                case KMGameInfo.State.Quitting:
+                    Modules.Clear();
+                    BombActive = false;
+                    StopCoroutine(CheckForBomb());
+                    StopCoroutine(FactoryCheck());
+                    StopCoroutine(WaitUntilEndFactory());
+                    StopCoroutine("CheckNewModule");
+                    Bombs.Clear();
+                    BombCommanders.Clear();
+                    recognizer.Stop();
+                    break;
+                default:
+                    recognizer.Stop();
+                    break;
             }
-            else { recognizer.Stop(); }
         };
         var storage = GetComponent<Storage>();
         ManualObject = Instantiate(storage.ManualPrefab);
@@ -112,7 +138,6 @@ public class VrEfmService : MonoBehaviour
             recognizer.Stop();
             CurrentNote.Text = $"An error occurred while setting up voice commands.\nMake sure dictation is enabled on your device (Settings->Privacy->Speech, inking & typing)\nIf it's not, please enable it and restart the bomb!\nIf it is, please contact my developer!\nError message: {error}";
         };
-        recognizer.Start();
     }
 
     public void OnApplicationQuit()
@@ -159,8 +184,12 @@ public class VrEfmService : MonoBehaviour
         return ManualCache[module];
     }
 
-    private void HandleModule(string module)
+    private bool TryGetNote(Module module, out ModuleNote note) => Notes.TryGetValue(module == null ? null : module.BombComponent, out note);
+
+    private void HandleModule(Module module)
     {
-        var prepared = PrepareModule(module);
+        if(module!=null) Open(module.ModuleName);
+        TryGetNote(module, out CurrentNote);
+        ChangeNoteText(CurrentNote.Text);
     }
 }

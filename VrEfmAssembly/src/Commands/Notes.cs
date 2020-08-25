@@ -25,4 +25,10 @@
     {
         VrEfmService.instance.CurrentNote.Reset();
     }
+
+    [Command("clear")]
+    public static void Clear(string command)
+    {
+        VrEfmService.instance.CurrentNote.Text = "";
+    }
 }

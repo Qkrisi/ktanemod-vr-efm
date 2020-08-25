@@ -18,5 +18,6 @@
         Ports = "";
         Serial = "";
         Other = "";
+        VrEfmService.instance.UpdateEdgework();
     }
 }

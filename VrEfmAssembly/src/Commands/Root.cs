@@ -15,9 +15,16 @@ public static class Root
         ProcessCommand(command, typeof(NoteCommands));
     }
 
+    [Command("edgework ")]
+    public static void RunEdgeworkCommand(string command)
+    {
+        ProcessCommand(command, typeof(EdgeworkCommands));
+    }
+
     public static void ProcessCommand(string command, Type CommandBatch)
     {
-        foreach(var method in CommandBatch.GetMethods(BindingFlags.Static))
+        Action Finalize = () => { };
+        foreach (var method in CommandBatch.GetMethods(BindingFlags.Static))
         {
             foreach(var attribute in method.GetCustomAttributes(false))
             {
@@ -29,7 +36,14 @@ public static class Root
                         break;
                     }
                 }
+                else if(attribute is DefaultCommand DefaultCommandAttribute)
+                {
+                    Action temp = () => method.Invoke(null, new object[] { command });
+                    if (DefaultCommandAttribute.RunPriority == Priority.Before) temp();
+                    else { Finalize = temp; }
+                }
             }
         }
+        Finalize();
     }
 }

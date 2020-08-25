@@ -2,6 +2,7 @@
 
 public sealed class ModuleNote
 {
+    private readonly string StartingText;
     private List<string> History = new List<string>();
     private string __text;
     private string _text
@@ -13,7 +14,7 @@ public sealed class ModuleNote
         set
         {
             __text = value;
-            //TODO: Change text on object
+            VrEfmService.instance.ChangeNoteText(__text);
         }
     }
     public string Text
@@ -45,9 +46,15 @@ public sealed class ModuleNote
         Text = $"{Text}{separator}{t}";
     }
 
-    public ModuleNote(string StartingText = "")
+    public void Reset()
     {
-        _text = StartingText;
-        History.Add(StartingText);
+        Text = StartingText;
+    }
+
+    public ModuleNote(string startingText = "")
+    {
+        StartingText = startingText;
+        _text = startingText;
+        History.Add(startingText);
     }
 }

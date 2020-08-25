@@ -8,6 +8,7 @@
     }
 
     [Command("newline")]
+    [Command("new line")]
     public static void NewLine(string command)
     {
         VrEfmService.instance.CurrentNote.Append(command, "\n");
@@ -17,5 +18,11 @@
     public static void Append(string command)
     {
         VrEfmService.instance.CurrentNote.Append(command);
+    }
+
+    [Command("reset")]
+    public static void Reset(string command)
+    {
+        VrEfmService.instance.CurrentNote.Reset();
     }
 }

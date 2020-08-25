@@ -2,6 +2,7 @@
 
 public class Storage : MonoBehaviour
 {
-    public static GameObject ManualPrefab;
-    public static GameObject NotesPrefab;
+    public GameObject ManualPrefab;
+    public GameObject NotesPrefab;
+    public GameObject EdgeworkPrefab;
 }

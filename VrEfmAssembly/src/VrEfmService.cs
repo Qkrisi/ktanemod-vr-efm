@@ -5,13 +5,28 @@ using System.Net;
 using System.Web;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Windows.Speech;
 using PdfiumViewer;
 
 public class VrEfmService : MonoBehaviour
 {
-
     private Dictionary<string, LinkedList<Texture2D>> ManualCache = new Dictionary<string, LinkedList<Texture2D>>();
-    private LinkedListNode<Texture2D> CurrentManual = null;
+    private LinkedListNode<Texture2D> _CurrentManual = null;
+    private LinkedListNode<Texture2D> CurrentManual
+    {
+        get
+        {
+            return _CurrentManual;
+        }
+        set
+        {
+            if (value != null)
+            {
+                _CurrentManual = value;
+                ManualObject.GetComponent<Renderer>().material.mainTexture = _CurrentManual.Value;
+            }
+        }
+    }
 
     private readonly Dictionary<string, string> ModuleOverrides = new Dictionary<string, string>()
     {
@@ -21,14 +36,89 @@ public class VrEfmService : MonoBehaviour
 
     private readonly string path = Path.Combine(Application.persistentDataPath, "VrEfm");
 
-    public ModuleNote CurrentNote = new ModuleNote();
+    private List<ModuleNote> Notes = new List<ModuleNote>();
+    public ModuleNote CurrentNote = null;
+
     public static VrEfmService instance = null;
-    
+
+    public EdgeworkHandler Edgework = new EdgeworkHandler();
+
+    [HideInInspector]
+    public GameObject ManualObject;
+    [HideInInspector]
+    public GameObject NoteObject;
+    [HideInInspector]
+    public GameObject EdgeworkObject;
+
+    private DictationRecognizer recognizer;
+
+    #region ManualActions
+    public void MovePage(MoveDirection direction)
+    {
+        if (CurrentManual != null) CurrentManual = direction == MoveDirection.Previous ? CurrentManual.Previous : CurrentManual.Next;
+    }
+
+    public void Open(string module)
+    {
+        ManualCache.TryGetValue(module, out LinkedList<Texture2D> manual);
+        CurrentManual = manual.First;
+    }
+    #endregion
+
+    #region TextUpdates
+    public void UpdateText(GameObject obj, string text)
+    {
+        obj.GetComponentInChildren<TextMesh>(true).text = text;
+    }
+
+    public void ChangeNoteText(string text)
+    {
+        UpdateText(NoteObject, text);
+    }
+
+    public void UpdateEdgework()
+    {
+        UpdateText(EdgeworkObject, Edgework.GetText());
+    }
+    #endregion
+
+    public void Awake()
+    {
+        instance = this;
+    }
 
     public void Start()
     {
-        instance = this;
         if (!Directory.Exists(path)) Directory.CreateDirectory(path);
+        GetComponent<KMGameInfo>().OnStateChange += (state) =>
+        {
+            if (state == KMGameInfo.State.Gameplay)
+            {
+                Edgework.Clear();
+                recognizer.Start();
+            }
+            else { recognizer.Stop(); }
+        };
+        var storage = GetComponent<Storage>();
+        ManualObject = Instantiate(storage.ManualPrefab);
+        NoteObject = Instantiate(storage.NotesPrefab);
+        EdgeworkObject = Instantiate(storage.EdgeworkPrefab);
+        CurrentNote = new ModuleNote();
+        Notes.Add(CurrentNote);
+        recognizer = new DictationRecognizer(ConfidenceLevel.Medium);
+        recognizer.DictationResult += (text, confidence) => Root.ProcessCommand(text, typeof(Root));
+        recognizer.DictationError += (error, hresult) =>
+        {
+            recognizer.Stop();
+            CurrentNote.Text = $"An error occurred while setting up voice commands.\nMake sure dictation is enabled on your device (Settings->Privacy->Speech, inking & typing)\nIf it's not, please enable it and restart the bomb!\nIf it is, please contact my developer!\nError message: {error}";
+        };
+        recognizer.Start();
+    }
+
+    public void OnApplicationQuit()
+    {
+        recognizer.Stop();
+        recognizer.Dispose();
     }
 
     private Texture2D HandleImage(Image image, SizeF size)

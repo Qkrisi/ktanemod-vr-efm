@@ -36,7 +36,7 @@ public class VrEfmService : MonoBehaviour
 
     private readonly string path = Path.Combine(Application.persistentDataPath, "VrEfm");
 
-    private List<ModuleNote> Notes = new List<ModuleNote>();
+    private Dictionary<BombComponent, ModuleNote> Notes = new Dictionary<BombComponent, ModuleNote>();
     public ModuleNote CurrentNote = null;
 
     public static VrEfmService instance = null;
@@ -104,7 +104,7 @@ public class VrEfmService : MonoBehaviour
         NoteObject = Instantiate(storage.NotesPrefab);
         EdgeworkObject = Instantiate(storage.EdgeworkPrefab);
         CurrentNote = new ModuleNote();
-        Notes.Add(CurrentNote);
+        Notes.Add(null, CurrentNote);
         recognizer = new DictationRecognizer(ConfidenceLevel.Medium);
         recognizer.DictationResult += (text, confidence) => Root.ProcessCommand(text, typeof(Root));
         recognizer.DictationError += (error, hresult) =>

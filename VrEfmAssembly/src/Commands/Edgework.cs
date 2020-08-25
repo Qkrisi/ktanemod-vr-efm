@@ -52,4 +52,10 @@
     {
         VrEfmService.instance.Edgework.Other += $" {command}";
     }
+
+    [Command("clear")]
+    public static void Clear(string command)
+    {
+        VrEfmService.instance.Edgework.Clear();
+    }
 }
